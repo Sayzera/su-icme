@@ -1,0 +1,40 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Tasks koleksiyonu
+    match /tasks/{taskId} {
+      // Tek bir görevi okuma - kullanıcı kendi görevini okuyabilir veya bugünün görevlerini okuyabilir
+      allow get: if request.auth != null && (
+        resource.data.userId == request.auth.uid ||
+        (resource.data.date != null && resource.data.date >= timestamp.date(2024, 1, 1))
+      );
+      
+      // Liste sorgusu - kullanıcı kendi görevlerini veya bugünün tüm görevlerini okuyabilir
+      allow list: if request.auth != null;
+      
+      // Görev oluşturma - sadece kendi görevlerini oluşturabilir
+      allow create: if request.auth != null && 
+        request.auth.uid == request.resource.data.userId &&
+        request.resource.data.date != null &&
+        request.resource.data.timeRangeId != null;
+      
+      // Görev güncelleme - sadece kendi görevlerini güncelleyebilir
+      allow update: if request.auth != null && 
+        request.auth.uid == resource.data.userId;
+      
+      // Görev silme - sadece kendi görevlerini silebilir
+      allow delete: if request.auth != null && 
+        request.auth.uid == resource.data.userId;
+    }
+    
+    // Users koleksiyonu
+    match /users/{userId} {
+      // Tüm kullanıcılar okuyabilir (email görüntüleme için)
+      allow read: if request.auth != null;
+      
+      // Sadece kendi bilgilerini yazabilir
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}
+
