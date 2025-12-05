@@ -22,6 +22,7 @@ const TeamView = () => {
   const [loading, setLoading] = useState(true);
   const [userStats, setUserStats] = useState({});
   const userEmailsRef = useRef({});
+  const isMountedRef = useRef(true);
 
   // Bugünün tarihini al
   const getTodayDate = () => {
@@ -48,11 +49,16 @@ const TeamView = () => {
       where('date', '<', Timestamp.fromDate(tomorrow))
     );
 
-    let isMounted = true;
+    // Component mount durumunu sıfırla
+    isMountedRef.current = true;
 
     const unsubscribe = onSnapshot(
       q,
-      async (snapshot) => {
+      (snapshot) => {
+        if (!isMountedRef.current) return;
+
+        console.log('snapshot', snapshot);
+
         try {
           const tasksData = snapshot.docs.map(doc => ({
             id: doc.id,
@@ -68,41 +74,9 @@ const TeamView = () => {
             tasksByUser[task.userId].push(task);
           });
 
-          // Kullanıcı email'lerini Firestore'dan çek
+          // Önce görevleri mevcut email cache ile göster (anlık güncelleme için)
           const userIds = Object.keys(tasksByUser);
-          const emails = {};
-          
-          // Sadece yeni kullanıcıların email'lerini çek
-          const newUserIds = userIds.filter(userId => !userEmailsRef.current[userId]);
-          
-          if (newUserIds.length > 0) {
-            try {
-              await Promise.all(
-                newUserIds.map(async (userId) => {
-                  try {
-                    const userDocRef = doc(db, 'users', userId);
-                    const userDoc = await getDoc(userDocRef);
-                    if (userDoc.exists()) {
-                      emails[userId] = userDoc.data().email || 'Bilinmeyen';
-                    } else {
-                      emails[userId] = 'Bilinmeyen';
-                    }
-                  } catch (error) {
-                    console.error(`Kullanıcı ${userId} bilgisi alınamadı:`, error);
-                    emails[userId] = 'Bilinmeyen';
-                  }
-                })
-              );
-              
-              // Email cache'ini güncelle
-              userEmailsRef.current = { ...userEmailsRef.current, ...emails };
-            } catch (error) {
-              console.error('Email çekme hatası:', error);
-            }
-          }
-
-          // Tüm email'leri birleştir (cache + yeni)
-          const allEmails = { ...userEmailsRef.current, ...emails };
+          const allEmails = { ...userEmailsRef.current };
 
           // Her kullanıcı için görevleri zaman aralıklarına göre düzenle
           const teamData = Object.keys(tasksByUser).map(userId => {
@@ -121,7 +95,7 @@ const TeamView = () => {
 
             return {
               userId,
-              email: allEmails[userId] || 'Bilinmeyen',
+              email: allEmails[userId] || 'Yükleniyor...',
               tasks: userTaskRanges,
               completedCount,
               totalCount,
@@ -139,31 +113,87 @@ const TeamView = () => {
             };
           });
 
-          if (isMounted) {
-            setTeamTasks(teamData);
-            setUserStats(stats);
-            setLoading(false);
+          // Görevleri hemen güncelle (anlık güncelleme için)
+          setTeamTasks(teamData);
+          setUserStats(stats);
+          setLoading(false);
+
+          // Email'leri arka planda yükle (sadece yeni kullanıcılar için)
+          const newUserIds = userIds.filter(userId => !userEmailsRef.current[userId]);
+          
+          if (newUserIds.length > 0) {
+            // Email'leri arka planda yükle ve güncelle
+            Promise.all(
+              newUserIds.map(async (userId) => {
+                if (!isMountedRef.current) return;
+                
+                try {
+                  const userDocRef = doc(db, 'users', userId);
+                  const userDoc = await getDoc(userDocRef);
+                  if (userDoc.exists()) {
+                    const email = userDoc.data().email || 'Bilinmeyen';
+                    userEmailsRef.current[userId] = email;
+                    
+                    // Email yüklendikçe state'i güncelle
+                    if (isMountedRef.current) {
+                      setTeamTasks(prevTasks => 
+                        prevTasks.map(user => 
+                          user.userId === userId 
+                            ? { ...user, email }
+                            : user
+                        )
+                      );
+                    }
+                  } else {
+                    userEmailsRef.current[userId] = 'Bilinmeyen';
+                    if (isMountedRef.current) {
+                      setTeamTasks(prevTasks => 
+                        prevTasks.map(user => 
+                          user.userId === userId 
+                            ? { ...user, email: 'Bilinmeyen' }
+                            : user
+                        )
+                      );
+                    }
+                  }
+                } catch (error) {
+                  console.error(`Kullanıcı ${userId} bilgisi alınamadı:`, error);
+                  userEmailsRef.current[userId] = 'Bilinmeyen';
+                  if (isMountedRef.current) {
+                    setTeamTasks(prevTasks => 
+                      prevTasks.map(user => 
+                        user.userId === userId 
+                          ? { ...user, email: 'Bilinmeyen' }
+                          : user
+                      )
+                    );
+                  }
+                }
+              })
+            ).catch(error => {
+              console.error('Email çekme hatası:', error);
+            });
           }
         } catch (error) {
           console.error('Görev yükleme hatası:', error);
-          if (isMounted) {
+          if (isMountedRef.current) {
             setLoading(false);
           }
         }
       },
       (error) => {
         console.error('Firestore snapshot hatası:', error);
-        if (isMounted) {
+        if (isMountedRef.current) {
           setLoading(false);
         }
       }
     );
 
     return () => {
-      isMounted = false;
+      isMountedRef.current = false;
       unsubscribe();
     };
-  }, [timeRanges, currentUser]);
+  }, []);
 
 
   if (loading) {
