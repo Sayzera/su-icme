@@ -63,16 +63,31 @@ export const showNotification = (title, options = {}) => {
  * Görev tamamlandı bildirimi göster
  */
 export const showTaskCompletedNotification = (userEmail, timeRangeLabel) => {
+  // Bildirim izni kontrolü
+  if (!('Notification' in window)) {
+    console.log('Bu tarayıcı bildirimleri desteklemiyor.');
+    return;
+  }
+
+  if (Notification.permission !== 'granted') {
+    console.log('Bildirim izni verilmemiş.');
+    return;
+  }
+
   const title = '💧 Yeni Görev Tamamlandı!';
   const body = `${userEmail} ${timeRangeLabel} görevini tamamladı!`;
   
-  showNotification(title, {
-    body,
-    icon: '/vite.svg',
-    badge: '/vite.svg',
-    tag: `task-completed-${Date.now()}`, // Her bildirimi benzersiz yap
-    requireInteraction: false,
-    silent: false
-  });
+  try {
+    showNotification(title, {
+      body,
+      icon: '/vite.svg',
+      badge: '/vite.svg',
+      tag: `task-completed-${Date.now()}`, // Her bildirimi benzersiz yap
+      requireInteraction: false,
+      silent: false
+    });
+  } catch (error) {
+    console.error('Bildirim gösterilirken hata oluştu:', error);
+  }
 };
 

@@ -1,6 +1,0 @@
-[build]
-  command = "pnpm build"
-  publish = "dist"
-
-[build.environment]
-  PNPM_VERSION = "8"

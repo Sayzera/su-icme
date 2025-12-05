@@ -108,6 +108,8 @@ export const TaskProvider = ({ children }) => {
       where('date', '<', Timestamp.fromDate(tomorrow))
     );
 
+    let isFirstLoad = true; // İlk yükleme kontrolü
+
     const unsubscribe = onSnapshot(q, async (snapshot) => {
       const tasksData = snapshot.docs.map(doc => ({
         id: doc.id,
@@ -116,6 +118,16 @@ export const TaskProvider = ({ children }) => {
 
       // Sadece tamamlanan görevleri filtrele
       const completedTasks = tasksData.filter(task => task.completed && task.completedAt);
+      
+      // İlk yüklemede mevcut tamamlanan görevleri cache'e ekle (bildirim gönderme)
+      if (isFirstLoad) {
+        completedTasks.forEach(task => {
+          const taskKey = `${task.userId}-${task.timeRangeId}`;
+          previousCompletedTasksRef.current.add(taskKey);
+        });
+        isFirstLoad = false;
+        return; // İlk yüklemede bildirim gönderme
+      }
       
       // Yeni tamamlanan görevleri bul (diğer kullanıcıların görevleri)
       const newCompletedTasks = completedTasks.filter(task => {
@@ -130,7 +142,7 @@ export const TaskProvider = ({ children }) => {
         const taskKey = `${task.userId}-${task.timeRangeId}`;
         previousCompletedTasksRef.current.add(taskKey);
 
-        // Kullanıcı email'ini al (cache'den veya Firestore'dan)
+        // Kullanıcı email'ini al (cache'den veya Firestore'dan) 
         let userEmail = userEmailsCacheRef.current[task.userId];
         
         if (!userEmail) {
