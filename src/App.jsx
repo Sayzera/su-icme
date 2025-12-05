@@ -1,13 +1,29 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
+import { useEffect } from 'react'
 import { useAuth } from './contexts/AuthContext'
 import Login from './components/Login'
 import Dashboard from './components/Dashboard'
 import TeamView from './components/TeamView'
 import PrivateRoute from './components/PrivateRoute'
+import { requestNotificationPermission } from './services/notificationService'
 import './App.css'
 
 function App() {
   const { currentUser } = useAuth()
+
+  // Uygulama yüklendiğinde notification izni iste
+  useEffect(() => {
+    // Kullanıcı giriş yaptıktan sonra izin iste
+    if (currentUser) {
+      requestNotificationPermission().then(permission => {
+        if (permission) {
+          console.log('Bildirim izni verildi');
+        } else {
+          console.log('Bildirim izni reddedildi veya verilmedi');
+        }
+      });
+    }
+  }, [currentUser])
 
   return (
     <Routes>

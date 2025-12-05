@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { 
   collection, 
   query, 
@@ -8,10 +8,12 @@ import {
   updateDoc, 
   doc,
   onSnapshot,
-  Timestamp
+  Timestamp,
+  getDoc
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useAuth } from './AuthContext';
+import { showTaskCompletedNotification } from '../services/notificationService';
 
 const TaskContext = createContext();
 
@@ -28,6 +30,8 @@ export const TaskProvider = ({ children }) => {
   const [tasks, setTasks] = useState([]);
   const [todayTasks, setTodayTasks] = useState([]);
   const [loading, setLoading] = useState(true);
+  const previousCompletedTasksRef = useRef(new Set()); // Önceki tamamlanan görevleri takip et
+  const userEmailsCacheRef = useRef({}); // Kullanıcı email'lerini cache'le
 
   // Günlük görev aralıkları
   const timeRanges = [
@@ -83,6 +87,81 @@ export const TaskProvider = ({ children }) => {
       setTodayTasks(todayTasksData);
       setTasks(tasksData);
       setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [currentUser, timeRanges]);
+
+  // Diğer kullanıcıların görevlerini dinle ve bildirim gönder
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const today = getTodayDate();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    // Bugünün tüm görevlerini dinle (diğer kullanıcılar dahil)
+    const allTasksRef = collection(db, 'tasks');
+    const q = query(
+      allTasksRef,
+      where('date', '>=', Timestamp.fromDate(today)),
+      where('date', '<', Timestamp.fromDate(tomorrow))
+    );
+
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+      const tasksData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+
+      // Sadece tamamlanan görevleri filtrele
+      const completedTasks = tasksData.filter(task => task.completed && task.completedAt);
+      
+      // Yeni tamamlanan görevleri bul (diğer kullanıcıların görevleri)
+      const newCompletedTasks = completedTasks.filter(task => {
+        const taskKey = `${task.userId}-${task.timeRangeId}`;
+        const isNew = !previousCompletedTasksRef.current.has(taskKey);
+        const isOtherUser = task.userId !== currentUser.uid;
+        return isNew && isOtherUser;
+      });
+
+      // Yeni tamamlanan görevler için bildirim gönder
+      for (const task of newCompletedTasks) {
+        const taskKey = `${task.userId}-${task.timeRangeId}`;
+        previousCompletedTasksRef.current.add(taskKey);
+
+        // Kullanıcı email'ini al (cache'den veya Firestore'dan)
+        let userEmail = userEmailsCacheRef.current[task.userId];
+        
+        if (!userEmail) {
+          try {
+            const userDocRef = doc(db, 'users', task.userId);
+            const userDoc = await getDoc(userDocRef);
+            if (userDoc.exists()) {
+              userEmail = userDoc.data().email || 'Bilinmeyen Kullanıcı';
+              userEmailsCacheRef.current[task.userId] = userEmail;
+            } else {
+              userEmail = 'Bilinmeyen Kullanıcı';
+            }
+          } catch (error) {
+            console.error('Kullanıcı email alınamadı:', error);
+            userEmail = 'Bilinmeyen Kullanıcı';
+          }
+        }
+
+        // Zaman aralığı etiketini bul
+        const timeRange = timeRanges.find(tr => tr.id === task.timeRangeId);
+        const timeRangeLabel = timeRange ? timeRange.label : 'Görev';
+
+        // Bildirim göster
+        showTaskCompletedNotification(userEmail, timeRangeLabel);
+      }
+
+      // Tüm tamamlanan görevleri güncelle (cache için)
+      completedTasks.forEach(task => {
+        const taskKey = `${task.userId}-${task.timeRangeId}`;
+        previousCompletedTasksRef.current.add(taskKey);
+      });
     });
 
     return () => unsubscribe();
