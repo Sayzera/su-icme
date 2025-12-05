@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTask } from '../contexts/TaskContext';
@@ -21,7 +21,7 @@ const TeamView = () => {
   const [teamTasks, setTeamTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [userStats, setUserStats] = useState({});
-  const [userEmails, setUserEmails] = useState({});
+  const userEmailsRef = useRef({});
 
   // Bugünün tarihini al
   const getTodayDate = () => {
@@ -31,6 +31,11 @@ const TeamView = () => {
   };
 
   useEffect(() => {
+    if (!currentUser) {
+      setLoading(false);
+      return;
+    }
+
     const today = getTodayDate();
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
@@ -43,86 +48,122 @@ const TeamView = () => {
       where('date', '<', Timestamp.fromDate(tomorrow))
     );
 
-    const unsubscribe = onSnapshot(q, async (snapshot) => {
-      const tasksData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+    let isMounted = true;
 
-      // Kullanıcılara göre grupla
-      const tasksByUser = {};
-      tasksData.forEach(task => {
-        if (!tasksByUser[task.userId]) {
-          tasksByUser[task.userId] = [];
-        }
-        tasksByUser[task.userId].push(task);
-      });
+    const unsubscribe = onSnapshot(
+      q,
+      async (snapshot) => {
+        try {
+          const tasksData = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
 
-      // Kullanıcı email'lerini Firestore'dan çek
-      const userIds = Object.keys(tasksByUser);
-      const emails = {};
-      
-      await Promise.all(
-        userIds.map(async (userId) => {
-          try {
-            const userDocRef = doc(db, 'users', userId);
-            const userDoc = await getDoc(userDocRef);
-            if (userDoc.exists()) {
-              emails[userId] = userDoc.data().email || 'Bilinmeyen';
-            } else {
-              emails[userId] = 'Bilinmeyen';
+          // Kullanıcılara göre grupla
+          const tasksByUser = {};
+          tasksData.forEach(task => {
+            if (!tasksByUser[task.userId]) {
+              tasksByUser[task.userId] = [];
             }
-          } catch (error) {
-            console.error(`Kullanıcı ${userId} bilgisi alınamadı:`, error);
-            emails[userId] = 'Bilinmeyen';
+            tasksByUser[task.userId].push(task);
+          });
+
+          // Kullanıcı email'lerini Firestore'dan çek
+          const userIds = Object.keys(tasksByUser);
+          const emails = {};
+          
+          // Sadece yeni kullanıcıların email'lerini çek
+          const newUserIds = userIds.filter(userId => !userEmailsRef.current[userId]);
+          
+          if (newUserIds.length > 0) {
+            try {
+              await Promise.all(
+                newUserIds.map(async (userId) => {
+                  try {
+                    const userDocRef = doc(db, 'users', userId);
+                    const userDoc = await getDoc(userDocRef);
+                    if (userDoc.exists()) {
+                      emails[userId] = userDoc.data().email || 'Bilinmeyen';
+                    } else {
+                      emails[userId] = 'Bilinmeyen';
+                    }
+                  } catch (error) {
+                    console.error(`Kullanıcı ${userId} bilgisi alınamadı:`, error);
+                    emails[userId] = 'Bilinmeyen';
+                  }
+                })
+              );
+              
+              // Email cache'ini güncelle
+              userEmailsRef.current = { ...userEmailsRef.current, ...emails };
+            } catch (error) {
+              console.error('Email çekme hatası:', error);
+            }
           }
-        })
-      );
 
-      setUserEmails(emails);
+          // Tüm email'leri birleştir (cache + yeni)
+          const allEmails = { ...userEmailsRef.current, ...emails };
 
-      // Her kullanıcı için görevleri zaman aralıklarına göre düzenle
-      const teamData = Object.keys(tasksByUser).map(userId => {
-        const userTasks = tasksByUser[userId];
-        const userTaskRanges = timeRanges.map(range => {
-          const task = userTasks.find(t => t.timeRangeId === range.id && t.completed);
-          return {
-            ...range,
-            completed: task?.completed || false,
-            completedAt: task?.completedAt || null
-          };
-        });
+          // Her kullanıcı için görevleri zaman aralıklarına göre düzenle
+          const teamData = Object.keys(tasksByUser).map(userId => {
+            const userTasks = tasksByUser[userId];
+            const userTaskRanges = timeRanges.map(range => {
+              const task = userTasks.find(t => t.timeRangeId === range.id && t.completed);
+              return {
+                ...range,
+                completed: task?.completed || false,
+                completedAt: task?.completedAt || null
+              };
+            });
 
-        const completedCount = userTaskRanges.filter(t => t.completed).length;
-        const totalCount = userTaskRanges.length;
+            const completedCount = userTaskRanges.filter(t => t.completed).length;
+            const totalCount = userTaskRanges.length;
 
-        return {
-          userId,
-          email: emails[userId] || 'Bilinmeyen',
-          tasks: userTaskRanges,
-          completedCount,
-          totalCount,
-          progress: (completedCount / totalCount) * 100
-        };
-      });
+            return {
+              userId,
+              email: allEmails[userId] || 'Bilinmeyen',
+              tasks: userTaskRanges,
+              completedCount,
+              totalCount,
+              progress: totalCount > 0 ? (completedCount / totalCount) * 100 : 0
+            };
+          });
 
-      // İstatistikleri hesapla
-      const stats = {};
-      teamData.forEach(user => {
-        stats[user.userId] = {
-          completedCount: user.completedCount,
-          totalCount: user.totalCount,
-          progress: user.progress
-        };
-      });
+          // İstatistikleri hesapla
+          const stats = {};
+          teamData.forEach(user => {
+            stats[user.userId] = {
+              completedCount: user.completedCount,
+              totalCount: user.totalCount,
+              progress: user.progress
+            };
+          });
 
-      setTeamTasks(teamData);
-      setUserStats(stats);
-      setLoading(false);
-    });
+          if (isMounted) {
+            setTeamTasks(teamData);
+            setUserStats(stats);
+            setLoading(false);
+          }
+        } catch (error) {
+          console.error('Görev yükleme hatası:', error);
+          if (isMounted) {
+            setLoading(false);
+          }
+        }
+      },
+      (error) => {
+        console.error('Firestore snapshot hatası:', error);
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    );
 
-    return () => unsubscribe();
-  }, [timeRanges]);
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
+  }, [timeRanges, currentUser]);
 
 
   if (loading) {
