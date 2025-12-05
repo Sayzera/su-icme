@@ -196,6 +196,14 @@ export const TaskProvider = ({ children }) => {
         completed: true,
         completedAt: Timestamp.now()
       });
+
+      console.log(existingTask)
+
+
+      let timeRangLabel = timeRanges.find(tr => tr.id === timeRangeId)?.label;
+
+      // Bildirim gönder
+      showTaskCompletedNotification(currentUser.email, timeRangLabel);
     } else {
       // Yeni görev oluştur
       await addDoc(collection(db, 'tasks'), {
@@ -205,6 +213,9 @@ export const TaskProvider = ({ children }) => {
         completed: true,
         completedAt: Timestamp.now()
       });
+
+      // Bildirim gönder
+      showTaskCompletedNotification(currentUser.email, timeRangeLabel);
     }
   };
 
