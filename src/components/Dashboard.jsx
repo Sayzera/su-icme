@@ -1,7 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTask } from '../contexts/TaskContext';
-import { Range } from "react-range";
 import './Dashboard.css';
 import TaskCard from './TaskCard';
 

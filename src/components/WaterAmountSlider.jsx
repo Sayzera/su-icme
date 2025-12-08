@@ -9,10 +9,6 @@ function WaterAmountSlider({ taskId, onChange, completed, handleTaskToggle }) {
     const newValue = Number(e.target.value);
     setValue(newValue);
 
-    // localStorage'a kaydet
-    if (taskId) {
-      localStorage.setItem(`water-amount-${taskId}`, newValue.toString());
-    }
 
     if (onChange) {
       onChange(newValue);
@@ -24,13 +20,8 @@ function WaterAmountSlider({ taskId, onChange, completed, handleTaskToggle }) {
     if (completed && value !== 500) {
       isInternalChangeRef.current = true;
       setValue(500);
-      if (taskId) {
-        localStorage.setItem(`water-amount-${taskId}`, "500");
-      }
-    } else if (!completed && value !== 0) {
-      // Eğer completed false olduysa, localStorage'daki değeri koru
-      // Sadece state'i sıfırlama, kullanıcının ayarladığı değeri koru
-    }
+     
+    } 
   }, [completed, taskId]);
 
   // Value değiştiğinde task durumunu kontrol et (sadece kullanıcı değişikliklerinde)
