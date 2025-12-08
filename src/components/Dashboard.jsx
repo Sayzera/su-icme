@@ -1,7 +1,9 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTask } from '../contexts/TaskContext';
+import { Range } from "react-range";
 import './Dashboard.css';
+import TaskCard from './TaskCard';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -66,44 +68,7 @@ const Dashboard = () => {
 
       <div className="tasks-section">
         <h2>Günlük Görevler</h2>
-        <div className="tasks-grid">
-          {todayTasks.map((task) => (
-            <div 
-              key={task.id} 
-              className={`task-card ${task.completed ? 'completed' : ''}`}
-            >
-              <div className="task-header">
-                <h3>{task.label}</h3>
-                <div className={`task-status ${task.completed ? 'completed' : 'pending'}`}>
-                  {task.completed ? '✓ Tamamlandı' : '⏳ Bekliyor'}
-                </div>
-              </div>
-              
-              {task.completed && task.completedAt && (
-                <p className="completed-time">
-                  Tamamlanma: {task.completedAt?.toDate
-                    ? new Date(task.completedAt.toDate()).toLocaleTimeString('tr-TR', {
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })
-                    : task.completedAt
-                    ? new Date(task.completedAt).toLocaleTimeString('tr-TR', {
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })
-                    : ''}
-                </p>
-              )}
-
-              <button
-                onClick={() => handleTaskToggle(task.id, task.completed)}
-                className={`task-button ${task.completed ? 'uncomplete' : 'complete'}`}
-              >
-                {task.completed ? 'Geri Al' : 'Tamamla'}
-              </button>
-            </div>
-          ))}
-        </div>
+        <TaskCard todayTasks={todayTasks} handleTaskToggle={handleTaskToggle} />
       </div>
     </div>
   );
