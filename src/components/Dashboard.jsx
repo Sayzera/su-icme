@@ -3,19 +3,21 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTask } from '../contexts/TaskContext';
 import './Dashboard.css';
 import TaskCard from './TaskCard';
+import { useCallback } from 'react';
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const { currentUser, logout } = useAuth();
   const { todayTasks, completeTask, uncompleteTask, loading } = useTask();
 
-  const handleTaskToggle = async (timeRangeId, completed) => {
+  const handleTaskToggle = useCallback(async (timeRangeId, completed) => {
+    console.log('handleTaskToggle', timeRangeId, completed);
     if (completed) {
       await uncompleteTask(timeRangeId);
     } else {
       await completeTask(timeRangeId);
     }
-  };
+  }, [ uncompleteTask, completeTask]);
 
   const getCompletedCount = () => {
     return todayTasks.filter(task => task.completed).length;
