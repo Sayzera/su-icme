@@ -1,21 +1,18 @@
-import React, { useMemo } from "react";
-import { useEffect, useRef } from "react";
+import React, { useEffect } from "react";
 
 function WaterAmountSlider({ taskId,  completed, handleTaskToggle }) {
-  const [value, setValue] = React.useState(0);
-  const isInternalChangeRef = useRef(false);
+  // Başlangıç değerini completed'a göre ayarla
+  const [value, setValue] = React.useState(completed ? 500 : 0);
 
   const handleChange = (e) => {
     const newValue = Number(e.target.value);
     setValue(newValue);
   };
 
-  // Completed prop değiştiğinde value'yu güncelle (internal değişiklik)
+  // Completed prop değiştiğinde value'yu güncelle
   useEffect(() => {
     if (completed && value !== 500) {
-      isInternalChangeRef.current = true;
       setValue(500);
-     
     } 
   }, [completed, taskId]);
 

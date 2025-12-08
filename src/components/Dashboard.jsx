@@ -11,7 +11,6 @@ const Dashboard = () => {
   const { todayTasks, completeTask, uncompleteTask, loading } = useTask();
 
   const handleTaskToggle = useCallback(async (timeRangeId, completed) => {
-    console.log('handleTaskToggle', timeRangeId, completed);
     if (completed) {
       await uncompleteTask(timeRangeId);
     } else {
