@@ -1,31 +1,40 @@
 import React, { useEffect } from "react";
+import { useTask } from "../contexts/TaskContext";
 
-function WaterAmountSlider({ taskId,  completed, handleTaskToggle }) {
-  // Başlangıç değerini completed'a göre ayarla
-  const [value, setValue] = React.useState(completed ? 500 : 0);
+function WaterAmountSlider({ taskId, completed, handleTaskToggle, taskDocId, amountOfWaterCosumed }) {
 
+  // Başlangıç değerini completed'a göre ayarla (undefined kontrolü ile)
+  const [value, setValue] = React.useState(completed ? (amountOfWaterCosumed ?? 500) : 0);
+  const { amountOfWaterCosumedUpdate } = useTask();
+
+  // Anlık UI güncellemesi (sürüklerken)
   const handleChange = (e) => {
     const newValue = Number(e.target.value);
     setValue(newValue);
   };
 
-  // Completed prop değiştiğinde value'yu güncelle
-  useEffect(() => {
-    if (completed && value !== 500) {
-      setValue(500);
-    } 
-  }, [completed, taskId]);
+  // El çekilince kaydet
+  const handleCommit = () => {
+    if (taskDocId) {
+      amountOfWaterCosumedUpdate(taskDocId, value);
+    }
 
-  // Value değiştiğinde task durumunu kontrol et (sadece kullanıcı değişikliklerinde)
-  useEffect(() => {
+    // Task durumunu kontrol et
     if (value === 500 && !completed && handleTaskToggle) {
       handleTaskToggle(taskId, false);
     }
-
     if (value === 0 && completed && handleTaskToggle) {
       handleTaskToggle(taskId, true);
     }
-  }, [value]);
+  };
+
+  // Dış kaynaklardan gelen değerleri sync et
+  useEffect(() => {
+    // Firestore'dan gelen değer varsa kullan
+    if (amountOfWaterCosumed != null) {
+      setValue(amountOfWaterCosumed);
+    }
+  }, [amountOfWaterCosumed]);
 
   return (
     <div
@@ -80,6 +89,8 @@ function WaterAmountSlider({ taskId,  completed, handleTaskToggle }) {
           max={500}
           value={value}
           onChange={handleChange}
+          onMouseUp={handleCommit}
+          onTouchEnd={handleCommit}
           style={{
             width: "95%",
             accentColor: "#38b6ff",

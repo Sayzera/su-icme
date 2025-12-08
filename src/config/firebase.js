@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
+import { getMessaging, getToken, onMessage } from 'firebase/messaging';
 
 // Firebase yapılandırmanızı buraya ekleyin
 const firebaseConfig = {
@@ -18,5 +19,38 @@ const app = initializeApp(firebaseConfig);
 // Firebase servislerini export et
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+
+// Firebase Cloud Messaging
+export const messaging = getMessaging(app);
+
+// VAPID Key - Firebase Console > Project Settings > Cloud Messaging > Web Push certificates
+// Bu key'i Firebase Console'dan almanız gerekiyor!
+const VAPID_KEY = 'BM89OPqqYYQaV-6xfUpG5tg0JliIGUHFgYqXR13vrKZUxnEVnMFW0rz3dzowTdLZ_XMdnbh8liOhLVfGZffIPlQ';
+
+// FCM Token al
+export const getFCMToken = async () => {
+  try {
+    const permission = await Notification.requestPermission();
+    if (permission === 'granted') {
+      const token = await getToken(messaging, { vapidKey: VAPID_KEY });
+      console.log('FCM Token:', token);
+      return token;
+    }
+    console.log('Bildirim izni reddedildi');
+    return null;
+  } catch (error) {
+    console.error('FCM Token alınamadı:', error);
+    return null;
+  }
+};
+
+// Foreground mesajları dinle
+export const onForegroundMessage = (callback) => {
+  return onMessage(messaging, (payload) => {
+    console.log('Foreground mesaj alındı:', payload);
+    callback(payload);
+  });
+};
+
 export default app;
 

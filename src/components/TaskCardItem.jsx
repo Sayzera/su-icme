@@ -1,11 +1,18 @@
 import { useState } from "react";
 import WaterAmountSlider from "./WaterAmountSlider";
 
-function TaskCardItem({ task, handleTaskToggle }) {
+function TaskCardItem({ task, handleTaskToggle, taskDocId }) {
+
 
   return (
     <div className={`task-card ${task.completed ? "completed" : ""}`}>
-      <WaterAmountSlider taskId={task.id} completed={task.completed} handleTaskToggle={handleTaskToggle} />
+      <WaterAmountSlider
+        taskId={task.id}
+        completed={task.completed}
+        amountOfWaterCosumed={task.amountOfWaterCosumed}
+        handleTaskToggle={handleTaskToggle}
+        taskDocId={taskDocId}
+      />
 
       <div className="task-header">
         <h3>{task.label}</h3>

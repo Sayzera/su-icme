@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword,
@@ -7,6 +7,8 @@ import {
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
+import { saveFCMToken, removeFCMToken, registerServiceWorker } from '../services/fcmService';
+import { onForegroundMessage } from '../config/firebase';
 
 const AuthContext = createContext();
 
@@ -21,6 +23,30 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const fcmTokenRef = useRef(null);
+
+  // Service Worker ve FCM kurulumu
+  useEffect(() => {
+    const setupFCM = async () => {
+      // Service Worker'ı kaydet
+      await registerServiceWorker();
+
+      // Foreground mesajları dinle
+      onForegroundMessage((payload) => {
+        console.log('📩 Foreground bildirim:', payload);
+        
+        // Foreground'da bildirim göster
+        if (Notification.permission === 'granted') {
+          new Notification(payload.notification?.title || '💧 Su İçme Hatırlatıcı', {
+            body: payload.notification?.body || 'Yeni bir bildirim var!',
+            icon: '/vite.svg'
+          });
+        }
+      });
+    };
+
+    setupFCM();
+  }, []);
 
   const signup = async (email, password) => {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -39,7 +65,12 @@ export const AuthProvider = ({ children }) => {
     return signInWithEmailAndPassword(auth, email, password);
   };
 
-  const logout = () => {
+  const logout = async () => {
+    // Logout'ta FCM token'ı kaldır
+    if (currentUser && fcmTokenRef.current) {
+      await removeFCMToken(currentUser.uid, fcmTokenRef.current);
+      fcmTokenRef.current = null;
+    }
     return signOut(auth);
   };
 
@@ -67,6 +98,13 @@ export const AuthProvider = ({ children }) => {
               updatedAt: serverTimestamp()
             }, { merge: true });
           }
+        }
+
+        // FCM Token kaydet (push notification için)
+        const token = await saveFCMToken(user.uid);
+        if (token) {
+          fcmTokenRef.current = token;
+          console.log('✅ FCM token kaydedildi');
         }
       }
       setCurrentUser(user);
