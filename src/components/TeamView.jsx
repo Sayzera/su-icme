@@ -228,12 +228,14 @@ const TeamView = () => {
         <h2>Bugünün Genel İstatistikleri</h2>
         <div className="team-stats-grid">
           <div className="stat-card">
-            <h3>{teamTasks.length}</h3>
+            <h3>{teamTasks.length || 0}</h3>
             <p>Aktif Kullanıcı</p>
           </div>
           <div className="stat-card">
             <h3>
-              {teamTasks.reduce((sum, user) => sum + user.completedCount, 0)}
+              {teamTasks.length > 0
+                ? teamTasks.reduce((sum, user) => sum + user.completedCount, 0)
+                : 0}
             </h3>
             <p>Toplam Tamamlanan Görev</p>
           </div>

@@ -15,8 +15,27 @@ const Statistics = () => {
   const navigate = useNavigate();
   const { currentUser, logout } = useAuth();
   const [completedTasks, setCompletedTasks] = useState(0);
+  const [dailyTasks, setDailyTasks] = useState(0);
+  const [weeklyTasks, setWeeklyTasks] = useState(0);
   const [loading, setLoading] = useState(true);
   const [totalWater, setTotalWater] = useState(0); // ml cinsinden
+  const [dailyWater, setDailyWater] = useState(0); // ml cinsinden
+  const [weeklyWater, setWeeklyWater] = useState(0); // ml cinsinden
+
+  // Bugünün tarihini al
+  const getTodayDate = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return today;
+  };
+
+  // Haftalık tarih aralığını al (son 7 gün)
+  const getWeeklyDateRange = () => {
+    const today = getTodayDate();
+    const weekAgo = new Date(today);
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    return { start: weekAgo, end: today };
+  };
 
   useEffect(() => {
     if (!currentUser) {
@@ -24,28 +43,77 @@ const Statistics = () => {
       return;
     }
 
-    // Tüm tamamlanan görevleri çek (sadece mevcut kullanıcının)
+    const today = getTodayDate();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const { start: weekStart, end: weekEnd } = getWeeklyDateRange();
+    const weekEndTomorrow = new Date(weekEnd);
+    weekEndTomorrow.setDate(weekEndTomorrow.getDate() + 1);
+
     const tasksRef = collection(db, 'tasks');
-    const q = query(
+
+    // Tüm tamamlanan görevler
+    const allTasksQuery = query(
       tasksRef,
       where('userId', '==', currentUser.uid),
       where('completed', '==', true)
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    // Bugünün tamamlanan görevleri
+    const dailyTasksQuery = query(
+      tasksRef,
+      where('userId', '==', currentUser.uid),
+      where('completed', '==', true),
+      where('date', '>=', Timestamp.fromDate(today)),
+      where('date', '<', Timestamp.fromDate(tomorrow))
+    );
+
+    // Son 7 günün tamamlanan görevleri
+    const weeklyTasksQuery = query(
+      tasksRef,
+      where('userId', '==', currentUser.uid),
+      where('completed', '==', true),
+      where('date', '>=', Timestamp.fromDate(weekStart)),
+      where('date', '<', Timestamp.fromDate(weekEndTomorrow))
+    );
+
+    // Tüm görevler
+    const unsubscribeAll = onSnapshot(allTasksQuery, (snapshot) => {
       const tasksCount = snapshot.docs.length;
-      // Her task = 500ml
       const totalWaterML = tasksCount * 500;
-      
       setCompletedTasks(tasksCount);
       setTotalWater(totalWaterML);
+    }, (error) => {
+      console.error('Tüm görevler yükleme hatası:', error);
+    });
+
+    // Günlük görevler
+    const unsubscribeDaily = onSnapshot(dailyTasksQuery, (snapshot) => {
+      const tasksCount = snapshot.docs.length;
+      const dailyWaterML = tasksCount * 500;
+      setDailyTasks(tasksCount);
+      setDailyWater(dailyWaterML);
       setLoading(false);
     }, (error) => {
-      console.error('Firestore snapshot hatası:', error);
+      console.error('Günlük görevler yükleme hatası:', error);
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    // Haftalık görevler
+    const unsubscribeWeekly = onSnapshot(weeklyTasksQuery, (snapshot) => {
+      const tasksCount = snapshot.docs.length;
+      const weeklyWaterML = tasksCount * 500;
+      setWeeklyTasks(tasksCount);
+      setWeeklyWater(weeklyWaterML);
+    }, (error) => {
+      console.error('Haftalık görevler yükleme hatası:', error);
+    });
+
+    return () => {
+      unsubscribeAll();
+      unsubscribeDaily();
+      unsubscribeWeekly();
+    };
   }, [currentUser]);
 
   // İstatistikleri hesapla
@@ -53,6 +121,8 @@ const Statistics = () => {
   const oneLiterCount = Math.floor(completedTasks / 2); // 2 task = 1L
   const damacanaCount = Math.floor(completedTasks / 38); // 38 task = 19L (1 damacana)
   const totalWaterLiters = (totalWater / 1000).toFixed(2); // L cinsinden
+  const dailyWaterLiters = (dailyWater / 1000).toFixed(2); // L cinsinden
+  const weeklyWaterLiters = (weeklyWater / 1000).toFixed(2); // L cinsinden
 
   if (loading) {
     return (
@@ -83,6 +153,35 @@ const Statistics = () => {
       </header>
 
       <div className="statistics-content">
+        <div className="period-stats-grid">
+          <div className="period-stat-card">
+            <h3>📅 Günlük</h3>
+            <div className="period-water-amount">
+              <span className="period-water-value">{dailyWaterLiters}</span>
+              <span className="period-water-unit">L</span>
+            </div>
+            <p className="period-tasks">{dailyTasks} görev tamamlandı</p>
+          </div>
+
+          <div className="period-stat-card">
+            <h3>📆 Haftalık</h3>
+            <div className="period-water-amount">
+              <span className="period-water-value">{weeklyWaterLiters}</span>
+              <span className="period-water-unit">L</span>
+            </div>
+            <p className="period-tasks">{weeklyTasks} görev tamamlandı</p>
+          </div>
+
+          <div className="period-stat-card">
+            <h3>🌍 Toplam</h3>
+            <div className="period-water-amount">
+              <span className="period-water-value">{totalWaterLiters}</span>
+              <span className="period-water-unit">L</span>
+            </div>
+            <p className="period-tasks">{completedTasks} görev tamamlandı</p>
+          </div>
+        </div>
+
         <div className="total-water-card">
           <h2>Toplam İçilen Su</h2>
           <div className="total-water-amount">
