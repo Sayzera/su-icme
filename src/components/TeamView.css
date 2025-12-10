@@ -32,6 +32,21 @@
   gap: 10px;
 }
 
+.stats-btn {
+  padding: 10px 20px;
+  background: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.3s;
+}
+
+.stats-btn:hover {
+  background: #45a049;
+}
+
 .back-btn {
   padding: 10px 20px;
   background: #667eea;

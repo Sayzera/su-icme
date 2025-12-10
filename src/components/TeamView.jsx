@@ -212,6 +212,9 @@ const TeamView = () => {
           <p className="user-email">{currentUser?.email}</p>
         </div>
         <div className="header-buttons">
+          <button onClick={() => navigate('/statistics')} className="stats-btn">
+            📊 İstatistikler
+          </button>
           <button onClick={() => navigate('/dashboard')} className="back-btn">
             ← Ana Sayfa
           </button>

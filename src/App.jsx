@@ -4,6 +4,7 @@ import { useAuth } from './contexts/AuthContext'
 import Login from './components/Login'
 import Dashboard from './components/Dashboard'
 import TeamView from './components/TeamView'
+import Statistics from './components/Statistics'
 import PrivateRoute from './components/PrivateRoute'
 import { requestNotificationPermission } from './services/notificationService'
 import './App.css'
@@ -44,6 +45,14 @@ function App() {
         element={
           <PrivateRoute>
             <TeamView />
+          </PrivateRoute>
+        } 
+      />
+      <Route 
+        path="/statistics" 
+        element={
+          <PrivateRoute>
+            <Statistics />
           </PrivateRoute>
         } 
       />
