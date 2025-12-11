@@ -250,6 +250,7 @@ const Statistics = () => {
             <li>1 görev = 0.5 litre</li>
             <li>2 görev = 1 litre</li>
             <li>38 görev = 1 damacana (19 litre)</li>
+            <li>1 litre su = {birLitreSuUcreti} ₺</li>
           </ul>
         </div>
       </div>
