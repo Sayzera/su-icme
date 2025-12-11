@@ -116,6 +116,9 @@ const Statistics = () => {
     };
   }, [currentUser]);
 
+  // 1 litre su fiyatı (.env'den al)
+  const birLitreSuUcreti = parseFloat(import.meta.env.VITE_BIR_LITRE_SU_UCRETI) || 0;
+
   // İstatistikleri hesapla
   const halfLiterCount = completedTasks; // Her task = 0.5L
   const oneLiterCount = Math.floor(completedTasks / 2); // 2 task = 1L
@@ -123,6 +126,11 @@ const Statistics = () => {
   const totalWaterLiters = (totalWater / 1000).toFixed(2); // L cinsinden
   const dailyWaterLiters = (dailyWater / 1000).toFixed(2); // L cinsinden
   const weeklyWaterLiters = (weeklyWater / 1000).toFixed(2); // L cinsinden
+
+  // Fiyat hesaplamaları (1 litre başına)
+  const totalPrice = (parseFloat(totalWaterLiters) * birLitreSuUcreti).toFixed(2);
+  const dailyPrice = (parseFloat(dailyWaterLiters) * birLitreSuUcreti).toFixed(2);
+  const weeklyPrice = (parseFloat(weeklyWaterLiters) * birLitreSuUcreti).toFixed(2);
 
   if (loading) {
     return (
@@ -161,6 +169,9 @@ const Statistics = () => {
               <span className="period-water-unit">L</span>
             </div>
             <p className="period-tasks">{dailyTasks} görev tamamlandı</p>
+            {birLitreSuUcreti > 0 && (
+              <p className="period-price">💰 {dailyPrice} ₺</p>
+            )}
           </div>
 
           <div className="period-stat-card">
@@ -170,6 +181,9 @@ const Statistics = () => {
               <span className="period-water-unit">L</span>
             </div>
             <p className="period-tasks">{weeklyTasks} görev tamamlandı</p>
+            {birLitreSuUcreti > 0 && (
+              <p className="period-price">💰 {weeklyPrice} ₺</p>
+            )}
           </div>
 
           <div className="period-stat-card">
@@ -179,6 +193,9 @@ const Statistics = () => {
               <span className="period-water-unit">L</span>
             </div>
             <p className="period-tasks">{completedTasks} görev tamamlandı</p>
+            {birLitreSuUcreti > 0 && (
+              <p className="period-price">💰 {totalPrice} ₺</p>
+            )}
           </div>
         </div>
 
@@ -189,6 +206,12 @@ const Statistics = () => {
             <span className="water-unit">Litre</span>
           </div>
           <p className="total-tasks">Tamamlanan Görev: {completedTasks}</p>
+          {birLitreSuUcreti > 0 && (
+            <div className="total-price">
+              <span className="price-label">Toplam Tutar:</span>
+              <span className="price-value">{totalPrice} ₺</span>
+            </div>
+          )}
         </div>
 
         <div className="statistics-grid">

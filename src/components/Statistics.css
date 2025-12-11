@@ -122,6 +122,13 @@
   font-size: 14px;
 }
 
+.period-price {
+  margin: 10px 0 0 0;
+  color: #4caf50;
+  font-size: 18px;
+  font-weight: 600;
+}
+
 .total-water-card {
   background: white;
   padding: 40px;
@@ -161,6 +168,28 @@
   margin: 0;
   color: #666;
   font-size: 16px;
+}
+
+.total-price {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 2px solid #e0e0e0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.price-label {
+  font-size: 16px;
+  color: #666;
+  font-weight: 500;
+}
+
+.price-value {
+  font-size: 32px;
+  font-weight: 700;
+  color: #4caf50;
 }
 
 .statistics-grid {

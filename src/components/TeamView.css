@@ -116,6 +116,11 @@
   overflow: hidden;
 }
 
+.statistics-grid .stat-card {
+  background: white !important;
+  color: black !important;
+}
+
 .stat-card::before {
   content: '';
   position: absolute;
