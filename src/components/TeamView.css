@@ -87,8 +87,13 @@
 
 .team-stats-section h2 {
   margin: 0 0 20px 0;
-  color: #333;
+  color: #333 !important;
   font-size: 24px;
+  font-weight: 600;
+}
+
+.team-container .team-stats-section h2 {
+  color: #333 !important;
 }
 
 .team-stats-grid {
@@ -98,23 +103,101 @@
 }
 
 .stat-card {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
   padding: 25px;
   border-radius: 12px;
   text-align: center;
   color: white;
+  transition: all 0.3s ease;
+  animation: fadeInUp 0.6s ease-out;
+  transform: translateY(0);
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 12px;
+  padding: 3px;
+  background: linear-gradient(45deg, #667eea, #764ba2, #ff6b6b, #4ecdc4, #667eea);
+  background-size: 300% 300%;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  animation: borderRotate 3s ease infinite;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.stat-card:hover::before {
+  opacity: 1;
+}
+
+.stat-card:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5);
+  background: linear-gradient(135deg, #7c8ef5 0%, #8a5fb8 100%);
+}
+
+.stat-card:nth-child(1) {
+  animation-delay: 0.1s;
+}
+
+.stat-card:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.stat-card:nth-child(3) {
+  animation-delay: 0.3s;
 }
 
 .stat-card h3 {
   margin: 0 0 10px 0;
   font-size: 36px;
   font-weight: 700;
+  color: white;
+  transition: transform 0.3s ease;
+}
+
+.stat-card:hover h3 {
+  transform: scale(1.1);
 }
 
 .stat-card p {
   margin: 0;
   font-size: 14px;
-  opacity: 0.9;
+  opacity: 0.95;
+  color: white;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes borderRotate {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 .users-section {

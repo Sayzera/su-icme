@@ -196,6 +196,9 @@ const TeamView = () => {
   }, []);
 
 
+  console.log('teamTasks', teamTasks);
+
+
   if (loading) {
     return (
       <div className="team-container">
@@ -225,7 +228,7 @@ const TeamView = () => {
       </header>
 
       <div className="team-stats-section">
-        <h2>Bugünün Genel İstatistikleri</h2>
+        <h2 style={{ color: '#333' }}>Bugünün Genel İstatistikleri</h2>
         <div className="team-stats-grid">
           <div className="stat-card">
             <h3>{teamTasks.length || 0}</h3>
